@@ -1,6 +1,6 @@
 # OpenDomainEngine aka Ode
 
-.Net framework to support domain driven design (DDD) using CQS/CQRS style implementations.
+.Net framework to support clean domain driven design (DDD) using CQS/CQRS style implementations without infrastructure plumbing in the domain.
 
 ## Intro..
 
