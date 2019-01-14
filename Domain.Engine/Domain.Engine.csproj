@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Ode.Domain.Engine</AssemblyName>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <RootNamespace>Ode.Domain.Engine</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Adapters\" />
+    <Folder Include="Brokers\" />
+    <Folder Include="Configuration\" />
+    <Folder Include="Dispatchers\" />
+    <Folder Include="Factories\" />
+    <Folder Include="Handlers\" />
+    <Folder Include="Model\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Domain.Engine.Interfaces\Domain.Engine.Interfaces.csproj" />
+    <ProjectReference Include="..\Domain.Engine.Transactions\Domain.Engine.Transactions.csproj" /> 
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>Ode.Domain.Engine.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
+  
+</Project>

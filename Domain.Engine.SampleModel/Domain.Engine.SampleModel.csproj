@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Ode.Domain.Engine.SampleModel</AssemblyName>
+    <RootNamespace>Ode.Domain.Engine.SampleModel</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Locations\" />
+    <Folder Include="Movements\" />
+    <Folder Include="Transactions\" />
+  </ItemGroup>
+
+</Project>

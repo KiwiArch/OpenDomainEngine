@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Ode.Domain.Engine.Interfaces</AssemblyName>
+    <RootNamespace>Ode.Domain.Engine</RootNamespace>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>Open Domain Engine</Authors>
+    <Product>Open Domain Engine</Product>
+    <Company>Open Domain Engine</Company>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Model\" />
+    <Folder Include="Serialization\" />
+    <Folder Include="Repositories\" />
+  </ItemGroup>
+
+</Project>
