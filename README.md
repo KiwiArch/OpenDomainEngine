@@ -10,8 +10,31 @@ The implementation of these projects soon started to pick up technical approache
 
 The domain engine came after these projects, as an experiment and sandbox for my own some of my colleagues ideas on how to avoid this in future projects as well as solving some of the technical problems we'd run into on those projects. This wasn't intended as production code but versions prior to this have found their way into the wild and are running 24/7 services.  
 
-So what does the domain engine do?, essentialy it allows for domains to be coded and tested without any dependencoes on infrastructure code.   The wiki covers more of the design goals but ideally I wanted to be able to write aggregates, event handlers and process managers to encapsulate a domain without a single dependency on infrastructure code, assemblies or packages.
+So what does the domain engine do?, essentialy it allows for domains to be coded and tested without any dependencoes on infrastructure code.   The wiki covers more of the design goals but ideally I wanted to be able to write aggregates, event handlers and process managers to encapsulate a domain without a single dependency on infrastructure code, assemblies or packages.  I wanted aggregates that look ed like this:
 
+namespace Acme.Warehouse.Locations
+{
+    public class Location
+    {
+        public LocationCreated When(CreateLocation command) {...}
+    
+        public AdjustedIn When(AdjustIn command) {...}
+
+        public MovedIn When(MoveIn command) {...}
+
+        public MovedOut When(MoveOut command) {...}
+
+        protected LocationCreated Then(LocationCreated stateChange) {...}
+
+        protected AdjustedIn Then(AdjustedIn stateChange) {...}
+
+        protected MovedIn Then(MovedIn stateChange) {...}
+
+        protected MovedOut Then(MovedOut stateChange) {...}
+    }
+}
+
+with no dependancies on base classes or interfaces or any other plumbing, just the domain implementation pure and simple.
 
 
 
