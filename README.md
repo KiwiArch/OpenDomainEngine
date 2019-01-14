@@ -12,6 +12,7 @@ The domain engine came after these projects, as an experiment and sandbox for my
 
 So what does the domain engine do?, essentialy it allows for domains to be coded and tested without any dependencoes on infrastructure code.   The wiki covers more of the design goals but ideally I wanted to be able to write aggregates, event handlers and process managers to encapsulate a domain without a single dependency on infrastructure code, assemblies or packages.  I wanted aggregates that look ed like this:
 
+```
 namespace Acme.Warehouse.Locations
 {
     public class Location
@@ -33,6 +34,7 @@ namespace Acme.Warehouse.Locations
         protected MovedOut Then(MovedOut stateChange) {...}
     }
 }
+```
 
 with no dependancies on base classes or interfaces or any other plumbing, just the domain implementation pure and simple.
 
