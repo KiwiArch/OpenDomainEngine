@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Ode.Domin.Engine.JsonSerialization</AssemblyName>
+    <RootNamespace>Ode.Domin.Engine.JsonSerialization</RootNamespace>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Domain.Engine.Interfaces\Domain.Engine.Interfaces.csproj" />
+    <ProjectReference Include="..\..\Domain.Engine\Domain.Engine.csproj" />
+  </ItemGroup>
+
+</Project>
