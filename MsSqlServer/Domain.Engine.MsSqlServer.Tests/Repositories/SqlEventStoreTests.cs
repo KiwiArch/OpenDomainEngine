@@ -1,6 +1,7 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Moq;
 using Ode.Domain.Engine.Factories;
-using Ode.Domain.Engine.Model.Fakes;
+using Ode.Domain.Engine.Model;
 using Ode.Domain.Engine.MsSqlServer.Exceptions;
 using Ode.Domain.Engine.Repositories;
 using Ode.Domain.Engine.SampleModel;
@@ -16,7 +17,7 @@ namespace Ode.Domain.Engine.MsSqlServer.Repositories.Tests
     [TestClass()]
     public class SqlEventStoreTests
     {
-        private StubIResolveEventTypes contextStub;
+        private Mock<IResolveEventTypes> contextStub;
         private const string connectionString = @"Server=localhost;Database=SqlEventStoreTests;Trusted_Connection=true";
 
         private class TestModel
@@ -71,9 +72,12 @@ namespace Ode.Domain.Engine.MsSqlServer.Repositories.Tests
                 context.Database.EnsureCreated();
             }
 
-            contextStub = new StubIResolveEventTypes();
-            contextStub.ResolveEventTypeString = (s) => Type.GetType(s);
-            contextStub.ResolveEventTypeFullNameType = (t) => t.AssemblyQualifiedName;
+            string eventTypeName = string.Empty;
+            Type eventType = null;
+
+            contextStub = new Mock<IResolveEventTypes>();
+            contextStub.Setup(x=>x.ResolveEventType(It.IsAny<string>())).Callback((string s) => eventTypeName = s).Returns(Type.GetType(eventTypeName));
+            contextStub.Setup(x=>x.ResolveEventTypeFullName(It.IsAny<Type>())).Callback((Type t) => eventType = t).Returns(eventType.AssemblyQualifiedName);
         }
 
         [TestCleanup]

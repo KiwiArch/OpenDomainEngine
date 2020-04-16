@@ -47,6 +47,7 @@
                 var parameters = method.GetParameters();
 
                 if (parameters.Count() == 1
+                    && parameters[0].ParameterType.Namespace != null
                     && parameters[0].ParameterType.Namespace.StartsWith(aggregateType.Namespace)
                     && method.Name == "When")
                 {

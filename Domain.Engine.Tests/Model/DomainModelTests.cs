@@ -1,7 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Ode.Domain.Engine.Model.Fakes;
-using Ode.Domain.Engine.Repositories.Fakes;
+using Moq;
+using Ode.Domain.Engine.Repositories;
 using Ode.Domain.Engine.SampleModel.Locations;
+using System.Security;
 
 namespace Ode.Domain.Engine.Model.Tests
 {
@@ -11,24 +12,24 @@ namespace Ode.Domain.Engine.Model.Tests
         [TestMethod]
         public void DomainModelTest()
         {
-            var domainModel = new RuntimeModel(new BoundedContextModel(), new StubIEventStore());
+            var domainModel = new RuntimeModel(new BoundedContextModel(), new Mock<IEventStore>().Object);
 
             Assert.IsInstanceOfType(domainModel, typeof(IRuntimeModel));
         }
 
-        //[TestMethod]
-        //public void WithDomainObjectResolverTest()
-        //{
-        //    var resolverCalled = false;
+        [TestMethod]
+        public void WithDomainObjectResolverTest()
+        {
+            var resolver = new Mock<IDomainObjectResolver>();
+            var eventStore = new Mock<IEventStore>();
 
-        //    var resolver = new StubIDomainObjectResolver();
-        //    resolver.NewOf1<Location>(() => { resolverCalled = true; return new Location(); });
+            resolver.Setup(x => x.New<Location>()).Returns(new Location()).Verifiable();
 
-        //    var domainModel = new RuntimeModel(new BoundedContextModel().WithDomainObjectResolver(resolver), new StubIEventStore());
+            var domainModel = new RuntimeModel(new BoundedContextModel().WithCommandHandler<MoveIn, Location, MovedIn>().WithDomainObjectResolver(resolver.Object), eventStore.Object);
 
-        //    domainModel.Aggregates.RetrieveById<Location>(string.Empty);
+            domainModel.Aggregates.RetrieveById<Location>(string.Empty);
 
-        //    Assert.IsTrue(resolverCalled);
-        //}
+            resolver.VerifyAll();
+        }
     }
 }

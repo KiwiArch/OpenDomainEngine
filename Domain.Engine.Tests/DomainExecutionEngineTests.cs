@@ -17,9 +17,9 @@ using Ode.Domain.Engine.Factories;
 using Ode.Domain.Engine.InMemory.Repositories;
 using Ode.Domain.Engine.Model;
 using Ode.Domain.Engine.Model.Configuration;
-using Ode.Domain.Engine.Model.Fakes;
-using Ode.Domain.Engine.Repositories.Fakes;
 using Unity;
+using Moq;
+using Ode.Domain.Engine.Repositories;
 
 namespace Ode.Domain.Engine.Tests
 {
@@ -55,16 +55,16 @@ namespace Ode.Domain.Engine.Tests
             var correlationId = "command1";
             var aggregateId = "location1";
 
-            var eventStore = new StubIEventStore();
+            var eventStore = new Mock<IEventStore>();
             var contextModel = new BoundedContextModel().WithAssemblyContaining<Location>();
 
-            eventStore.RetrieveByIdString = (id) => new Collection<IEvent>();
+            eventStore.Setup(x => x.RetrieveById(It.IsAny<string>())).Returns(new Collection<IEvent>());
 
             var item = new StockItem("item", "123");
 
             var command = CommandFactory.Default.CreateCommand<MoveIn>(commandId, correlationId, aggregateId, new MoveIn($"movement_{Guid.NewGuid()}", "locationA", item, "locationB"));
 
-            var engine = DomainFactory.CreateDomainExecutionEngine(contextModel, eventStore, DomainOptions.Defaults);
+            var engine = DomainFactory.CreateDomainExecutionEngine(contextModel, eventStore.Object, DomainOptions.Defaults);
 
             engine.Process(command);
         }
@@ -89,12 +89,12 @@ namespace Ode.Domain.Engine.Tests
         [TestMethod]
         public void ProcessTwoSequentialCommandsUsingDefaultHandlersTest()
         {
-            var eventStore = new StubIEventStore();
+            var eventStore = new Mock<IEventStore>();
             var contextModel = new BoundedContextModel().WithAssemblyContaining<Location>();
 
-            eventStore.RetrieveByIdString = (id) => new Collection<IEvent>();
+            eventStore.Setup(x => x.RetrieveById(It.IsAny<string>())).Returns(new Collection<IEvent>());
 
-            var engine = DomainFactory.CreateDomainExecutionEngine(contextModel, eventStore, DomainOptions.Defaults);
+            var engine = DomainFactory.CreateDomainExecutionEngine(contextModel, eventStore.Object, DomainOptions.Defaults);
 
             var item = new StockItem("item", "123");
 
@@ -194,30 +194,27 @@ namespace Ode.Domain.Engine.Tests
         [TestMethod]
         public void IoCUsingCustomMethodTest()
         {
-            var newLocationWasCalled = false;
-            var newInventoryItemWasCalled = false;
+            var domainObjectResolver = new Mock<IDomainObjectResolver>();
 
-            var domainObjectResolver = new StubIDomainObjectResolver();
+            domainObjectResolver.Setup(x => x.New<Location>()).Returns(new Location());
+            domainObjectResolver.Setup(x => x.New<InventoryItem>()).Returns(new InventoryItem());
+            domainObjectResolver.Setup(x => x.New(It.Is<Type>(x => x == typeof(Location)))).Returns(new Location()).Verifiable();
+            domainObjectResolver.Setup(x => x.New(It.Is<Type>(x => x == typeof(InventoryItem)))).Returns(new InventoryItem()).Verifiable();
 
-            domainObjectResolver.NewOf1<Location>(() => { newLocationWasCalled = true; return new Location(); });
-            domainObjectResolver.NewOf1<InventoryItem>(() => { newInventoryItemWasCalled = true; return new InventoryItem(); });
-            domainObjectResolver.NewType = (t) => Activator.CreateInstance(t);
+            var eventStore = new Mock<IEventStore>(MockBehavior.Loose);
+            var contextModel = new BoundedContextModel().WithAssemblyContaining<Location>().WithDomainObjectResolver(domainObjectResolver.Object);
 
-            var eventStore = new StubIEventStore();
-            var contextModel = new BoundedContextModel().WithAssemblyContaining<Location>().WithDomainObjectResolver(domainObjectResolver);
-
-            eventStore.RetrieveByIdString = (id) => new Collection<IEvent>();
+            eventStore.Setup(x => x.RetrieveById(It.IsAny<string>(), It.IsAny<int>())).Returns(new Collection<IEvent>());
 
             var command1 = CommandFactory.Default.CreateCommand<CreateLocation>(id: "C1", aggregateId: "Location 1", command: new CreateLocation("Location 1"));
             var command2 = CommandFactory.Default.CreateCommand<CreateInventoryItem>(id: "C2", aggregateId: "Item A", command: new CreateInventoryItem("Item A"));
 
-            var engine = DomainFactory.CreateDomainExecutionEngine(contextModel, eventStore, DomainOptions.Defaults);
+            var engine = DomainFactory.CreateDomainExecutionEngine(contextModel, eventStore.Object, DomainOptions.Defaults);
 
             engine.Process(command1);
             engine.Process(command2);
 
-
-            Assert.IsTrue(newLocationWasCalled && newInventoryItemWasCalled);
+            domainObjectResolver.VerifyAll();
         }
 
         private class UnityDomainObjectFactory : IDomainObjectResolver
@@ -249,15 +246,15 @@ namespace Ode.Domain.Engine.Tests
 
             var domainObjectFactory = new UnityDomainObjectFactory(unityContainer);
 
-            var eventStore = new StubIEventStore();
+            var eventStore = new Mock<IEventStore>();
             var contextModel = new BoundedContextModel().WithAssemblyContaining<Location>().WithDomainObjectResolver(domainObjectFactory);
 
-            eventStore.RetrieveByIdString = (id) => new Collection<IEvent>();
+            eventStore.Setup(x => x.RetrieveById(It.IsAny<string>())).Returns(new Collection<IEvent>());
 
             var command1 = CommandFactory.Default.CreateCommand<CreateLocation>(id: "C1", aggregateId: "Location 1", command: new CreateLocation("Location 1"));
             var command2 = CommandFactory.Default.CreateCommand<CreateInventoryItem>(id: "C2", aggregateId: "Item A", command: new CreateInventoryItem("Item A"));
 
-            var engine = DomainFactory.CreateDomainExecutionEngine(contextModel, eventStore, DomainOptions.Defaults);
+            var engine = DomainFactory.CreateDomainExecutionEngine(contextModel, eventStore.Object, DomainOptions.Defaults);
 
             engine.Process(command1);
             engine.Process(command2);
@@ -292,16 +289,16 @@ namespace Ode.Domain.Engine.Tests
 
             var domainObjectFactory = new NinjectDomainObjectFactory(ninjectKernel);
 
-            var eventStore = new StubIEventStore();
+            var eventStore = new Mock<IEventStore>();
             var contextModel = new BoundedContextModel().WithAssemblyContaining<Location>().WithDomainObjectResolver(domainObjectFactory);
-            var domainModel = new RuntimeModel(contextModel, eventStore);
+            var domainModel = new RuntimeModel(contextModel, eventStore.Object);
 
-            eventStore.RetrieveByIdString = (id) => new Collection<IEvent>();
+            eventStore.Setup(x => x.RetrieveById(It.IsAny<string>())).Returns(new Collection<IEvent>());
 
             var command1 = CommandFactory.Default.CreateCommand<CreateLocation>(id: "C1", aggregateId: "Location 1", command: new CreateLocation("Location 1"));
             var command2 = CommandFactory.Default.CreateCommand<CreateInventoryItem>(id: "C2", aggregateId: "Item A", command: new CreateInventoryItem("Item A"));
 
-            var engine = DomainFactory.CreateDomainExecutionEngine(contextModel, eventStore, DomainOptions.Defaults);
+            var engine = DomainFactory.CreateDomainExecutionEngine(contextModel, eventStore.Object, DomainOptions.Defaults);
 
             engine.Process(command1);
             engine.Process(command2);

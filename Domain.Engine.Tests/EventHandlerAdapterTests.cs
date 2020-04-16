@@ -1,4 +1,4 @@
-﻿namespace Ode.Domain.EngineTests
+﻿namespace Ode.Domain.Engine.Tests
 {
     using System;
     using System.Linq;

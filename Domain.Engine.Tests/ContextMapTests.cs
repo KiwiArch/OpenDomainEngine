@@ -5,7 +5,7 @@ using Ode.Domain.Engine.SampleModel.Locations;
 using Ode.Domain.Engine.SampleModel.Movements;
 using Ode.Domain.Engine.Model;
 using Ode.Domain.Engine.Model.Configuration;
-using Ode.Domain.Engine.Model.Fakes;
+using Moq;
 
 namespace Ode.Domain.Engine.Tests
 {
@@ -64,16 +64,6 @@ namespace Ode.Domain.Engine.Tests
             Assert.ThrowsException<ArgumentException>(() => (contextMap as IBoundedContextModel).GetAggregateType(typeof(CommandMock)));
         }
 
-        [TestMethod, Ignore]
-        public void UnknowEventThrowsExceptionTest()
-        {
-            var contextMap = new BoundedContextModel();
-
-            contextMap.WithAssemblyContaining<Location>();                   
-
-            Assert.ThrowsException<ArgumentException>(()=> (contextMap as IBoundedContextModel).GetEventHandlerTypes(typeof(EventMock))); 
-        }
-
         [TestMethod]
         public void MapFindsProcessTest()
         {
@@ -109,16 +99,14 @@ namespace Ode.Domain.Engine.Tests
         [TestMethod]
         public void WithDomainObjectResolverTest()
         {
-            var resolverCalled = false;
+            var resolver = new Mock<IDomainObjectResolver>();
+            resolver.Setup(x => x.New<Location>()).Returns(new Location());
 
-            var resolver = new StubIDomainObjectResolver();
-            resolver.NewOf1<Location>(() => { resolverCalled = true; return new Location(); });
-
-            var context = new BoundedContextModel().WithDomainObjectResolver(resolver);
+            var context = new BoundedContextModel().WithDomainObjectResolver(resolver.Object);
 
             context.DomainObjectResolver.New<Location>();
 
-            Assert.IsTrue(resolverCalled);
+            resolver.Verify(x => x.New<Location>());
         }
     }
 }

@@ -1,9 +1,8 @@
-﻿namespace Ode.Domain.EngineTests
+﻿namespace Ode.Domain.Engine.Tests
 {
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using Microsoft.QualityTools.Testing.Fakes.Stubs;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using Ode.Domain.Engine.SampleModel.Locations;
     using Ode.Domain.Engine.SampleModel.Locations.ValueObjects;
@@ -11,32 +10,29 @@
     using Ode.Domain.Engine;
     using Ode.Domain.Engine.Dispatchers;
     using Ode.Domain.Engine.Factories;
-    using Ode.Domain.Engine.Fakes;
     using Ode.Domain.Engine.Model;
     using Ode.Domain.Engine.Model.Configuration;
     using Ode.Domain.Engine.Repositories;
-    using Ode.Domain.Engine.Repositories.Fakes;
+    using Moq;
+    using System.Net.WebSockets;
 
     [TestClass]
     public class DistributedEngineTests
     {
         private IBoundedContextModel boundedContextModel;
-        private StubIEventStore eventStore;
-        private StubObserver eventStoreObserver;
+        private Mock<IEventStore> eventStore;
 
         [TestInitialize]
         public void TestInitialize()
         {
             this.boundedContextModel = new BoundedContextModel().WithAssemblyContaining<Location>().WithEventHandler<MovedOut, Movement, MoveIn>(e => e.EventBody.Movement, c => c.Location);
-            this.eventStore = new StubIEventStore();
-            this.eventStoreObserver = new StubObserver();
-            this.eventStore.InstanceObserver = eventStoreObserver;
+            this.eventStore = new Mock<IEventStore>(MockBehavior.Loose);
         }
 
         [TestMethod]
         public void CreateCommandEngine()
         {
-            var commandEngine = DomainFactory.CreateCommandEngine(this.boundedContextModel, this.eventStore);
+            var commandEngine = DomainFactory.CreateCommandEngine(this.boundedContextModel, this.eventStore.Object);
         }
 
         [TestMethod]
@@ -46,14 +42,13 @@
 
             var command = CommandFactory.Default.CreateCommand("command1", location, new CreateLocation(location));
 
-            var commandEngine = DomainFactory.CreateCommandEngine(this.boundedContextModel, eventStore);
+            var commandEngine = DomainFactory.CreateCommandEngine(this.boundedContextModel, eventStore.Object);
 
             var events = commandEngine.Process(command);
 
             Assert.IsNotNull(@events.SingleOrDefault(e => e.EventBody is LocationCreated));
-            Assert.IsTrue(this.eventStoreObserver.GetCalls().Any(call => call.StubbedMethod.Name == nameof(IEventStore.Store)));
-            Assert.IsTrue(this.eventStoreObserver.GetCalls().Any(call => call.StubbedMethod.Name == nameof(IEventStore.Store) && call.GetArguments().First().ToString() == location));
-            Assert.IsTrue(this.eventStoreObserver.GetCalls().Any(call => call.StubbedMethod.Name == nameof(IEventStore.Store) && call.GetArguments().Where(a => a is IEnumerable<IEvent>).Select(a => a as IEnumerable<IEvent>).First().Intersect(events).Count() == events.Count()));
+
+            this.eventStore.Verify(x => x.Store(location, events));
         }
 
         [TestMethod]
@@ -67,20 +62,13 @@
 
             var @event = EventFactory.Default.CreateEvent<Location, MovedOut>(location, 1, "command1", "command1", new MovedOut(movement, location, item, toLocation));
 
-            var eventHandlerStub = new StubIEventHandler();
-            var eventHandlerObserver = new StubObserver();
-            eventHandlerStub.InstanceObserver = eventHandlerObserver;
+            var eventHandler = new Mock<IEventHandler>();
 
-            var distributionEngine = DomainFactory.CreateEventDispatcher(this.boundedContextModel, eventHandlerStub);
+            var distributionEngine = DomainFactory.CreateEventDispatcher(this.boundedContextModel, eventHandler.Object);
 
             distributionEngine.DispatchEvent(@event);
 
-            var eventHandlerCalls = eventHandlerObserver.GetCalls().Where(call => call.StubbedMethod.Name == nameof(IEventHandler.Handle));
-
-            Assert.IsTrue(eventHandlerCalls.Any());
-
-            Assert.IsTrue(eventHandlerCalls.Any(call => call.GetArguments().Any(a => a == @event) && call.GetArguments().Any(a => a as Type == typeof(Movement)) && call.GetArguments().Any(a => a.ToString() == eventHandlerId)));
-
+            eventHandler.Verify(x => x.Handle(@event, eventHandlerId, typeof(Movement)));
         }
 
         [TestMethod]
@@ -96,17 +84,13 @@
 
             var @event = EventFactory.Default.CreateEvent<Location, MovedIn>(location, 3, "commandId", "correlationId", new MovedIn(movement, location, item, fromLocation));
 
-            var eventEngine = DomainFactory.CreateEventHandler(this.boundedContextModel, this.eventStore);
+            var eventEngine = DomainFactory.CreateEventHandler(this.boundedContextModel, this.eventStore.Object);
 
             var commands = eventEngine.Handle(@event, eventHandlerId, typeof(Movement));
 
             Assert.IsTrue(commands.Count() == 0);
 
-            var callToStore = this.eventStoreObserver.GetCalls().Where(call => call.StubbedMethod.Name == nameof(IEventStore.Store)).SingleOrDefault();
-
-            Assert.IsNotNull(callToStore);
-
-            Assert.IsTrue(callToStore.GetArguments().Any(a => a.ToString() == storedEventStreamId) && callToStore.GetArguments().Where(a => a is IEnumerable<IEvent>).Select(a => a as IEnumerable<IEvent>).Any(a => a.Count() == 1 && a.First().EventBody == @event.EventBody));
+            this.eventStore.Verify(x => x.Store(storedEventStreamId, It.Is<IEnumerable<IEvent>>(x => x.First().EventBody as MovedIn == @event.EventBody)));
         }
 
         [TestMethod]
@@ -121,41 +105,16 @@
 
             var @event = EventFactory.Default.CreateEvent<Location, MovedOut>(location, 3, "commandId", "correlationId", new MovedOut(movement, location, item, toLocation));
 
-            var eventEngine = DomainFactory.CreateEventHandler(this.boundedContextModel, this.eventStore);
+            var eventEngine = DomainFactory.CreateEventHandler(this.boundedContextModel, this.eventStore.Object);
 
             var commands = eventEngine.Handle(@event, eventHandlerId, typeof(Movement));
 
             Assert.IsTrue(commands.Count() == 1);
 
-            var callToStore = this.eventStoreObserver.GetCalls().Where(call => call.StubbedMethod.Name == nameof(IEventStore.Store)).SingleOrDefault();
-
-            Assert.IsNotNull(callToStore);
-
-            Assert.IsTrue(callToStore.GetArguments().Any(a => a.ToString() == storedEventStreamId) && callToStore.GetArguments().Where(a => a is IEnumerable<IEvent>).Select(a => a as IEnumerable<IEvent>).Any(a => a.Count() == 1 && a.First().EventBody == @event.EventBody));
+            this.eventStore.Verify(x => x.Store(storedEventStreamId, It.Is<IEnumerable<IEvent>>(x => x.First().EventBody as MovedOut == @event.EventBody)));
 
             Assert.IsTrue(commands.Single().AggregateId == toLocation);
             Assert.IsTrue(commands.Single().CorrelationId == @event.CorrelationId);
-        }
-
-        [TestMethod]
-        public void ProcessCommandToProjection()
-        {
-            var boundedContext = new BoundedContextModel().WithAssemblyContaining<Location>();
-            var eventStore = new StubIEventStore();
-
-            var location = "Mayfair";
-
-            var command = CommandFactory.Default.CreateCommand("command1", location, new CreateLocation(location));
-
-            var eventHandler = new TransactionalEventHandler(boundedContext, eventStore, cacheRuntimeModel: false);
-
-            var eventDispatcher = new EventDispatcher(boundedContext, eventHandler);
-
-            var commandEngine = DomainFactory.CreateCommandEngine(boundedContext, eventStore, eventHandler);
-
-            var events = commandEngine.Process(command);
-
-            Assert.Inconclusive();
         }
     }
 }
